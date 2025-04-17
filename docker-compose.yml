@@ -22,35 +22,36 @@ services:
         networks:
             - sail
         depends_on:
-            - pgsql
-    pgsql:
-        image: 'postgres:17'
-        ports:
-            - '${FORWARD_DB_PORT:-5432}:5432'
+            - mysql
+    mysql:
+        image: mysql:8.0
         environment:
-            PGPASSWORD: '${DB_PASSWORD:-secret}'
-            POSTGRES_DB: '${DB_DATABASE}'
-            POSTGRES_USER: '${DB_USERNAME}'
-            POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+            MYSQL_ROOT_PASSWORD: root_password
+            MYSQL_DATABASE: laravel
+            MYSQL_USER: sail
+            MYSQL_PASSWORD: password
+        ports:
+            - "3306:3306"
         volumes:
-            - 'sail-pgsql:/var/lib/postgresql/data'
-            - './vendor/laravel/sail/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
+            - mysql-data:/var/lib/mysql
         networks:
             - sail
-        healthcheck:
-            test:
-                - CMD
-                - pg_isready
-                - '-q'
-                - '-d'
-                - '${DB_DATABASE}'
-                - '-U'
-                - '${DB_USERNAME}'
-            retries: 3
-            timeout: 5s
-networks:
-    sail:
-        driver: bridge
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        ports:
+            - "8080:80"  # ここで設定したポートでアクセス
+        environment:
+            PMA_HOST: mysql  # 'mysql'はMySQLサービス名
+            PMA_PORT: 3306   # MySQLのデフォルトポート
+        depends_on:
+            - mysql  # MySQLコンテナが起動してからphpMyAdminを起動
+        networks:
+            - sail
+
 volumes:
-    sail-pgsql:
-        driver: local
+  mysql-data:
+
+networks:
+  sail:
+    driver: bridge
