@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <h1 class="text-3xl font-bold text-center mt-10">自己研鑽-時間管理システム</h1>
+    <h1 class="text-3xl font-bold text-center mt-100">自己研鑽-時間管理システム</h1>
     <p class="text-center mt-4">本日の自己研鑽の開始や終了をクリックしてください</p>
     <div class="flex justify-center gap-4 mt-6">
         <x-primary-button
