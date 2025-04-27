@@ -23,20 +23,19 @@
   </form>
 
   {{-- 終了ボタン --}}
-  <form action="{{ route('today.store') }}" method="POST">
-    @csrf
-    <input type="hidden" name="user_id" value="1020">
-    <input type="hidden" name="user_name" value="harada">
-    <input type="hidden" name="date" value="{{ now()->toDateString() }}">
-    <input type="hidden" name="end_time" value="{{ now()->format('H:i') }}">
-    <input type="hidden" name="start_flag" value="0">
-    <input type="hidden" name="break_flag" value="0">
-    <input type="hidden" name="end_flag" value="1">
+  <button
+    class="bg-blue-800 text-white hover:bg-blue-700 focus:bg-blue-900 active:bg-blue-900 focus:ring-blue-500 px-4 py-2 rounded opacity-50 cursor-not-allowed"
+    disabled>
+    終了
+  </button>
+</div>
 
-    <button type="submit"
-      class="btn end bg-blue-800 text-white hover:bg-blue-700 focus:bg-blue-900 active:bg-blue-900 focus:ring-blue-500 px-4 py-2 rounded">
-      終了
-    </button>
-  </form>
+<div class="mt-6">
+  {{-- $todaySkillUpTimeAllRecords があればコンポーネントを表示 --}}
+  @if($todaySkillUpTimeAllRecords)
+  <x-today-skill-up-time-record :todaySkillUpTimeAllRecords="$todaySkillUpTimeAllRecords" />
+  @else
+  <p class="text-center text-gray-500">本日はまだ自己研鑽しておりません。</p>
+  @endif
 </div>
 @endsection

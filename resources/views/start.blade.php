@@ -9,33 +9,50 @@
 </div>
 @endif
 
-<div class="flex justify-center gap-4 mt-6">
-  {{-- 開始ボタン --}}
-  <button
-    class="bg-red-500 text-black border-2 border-gray-600 px-4 py-2 rounded opacity-70 cursor-not-allowed filter blur-sm">
-    開始中
-  </button>
+@php
+$sessionTodaySkillUpTime = session('todaySkillUpTime');
+@endphp
 
-  {{-- 終了ボタン --}}
-  <form action="{{ route('today.update', ['id' => $todaySkillUpTime->id]) }}" method="POST">
-    @csrf
-    <input type="hidden" name="user_id" value="1020">
-    <input type="hidden" name="user_name" value="harada">
-    <input type="hidden" name="date" value="{{ now()->toDateString() }}">
-    <input type="hidden" name="end_time" value="{{ now()->format('H:i') }}">
-    <input type="hidden" name="start_flag" value="0">
-    <input type="hidden" name="end_flag" value="1">
+<div class="mt-6">
+  <div class="flex justify-center gap-12">
+    <form action="{{ route('today.update', ['id' => $sessionTodaySkillUpTime->id]) }}" method="POST"
+      class="w-full max-w-full">
+      @csrf
+      <input type="hidden" name="user_name" value="harada">
+      <input type="hidden" name="user_id" value="1020">
+      <input type="hidden" name="start_flag" value="0">
+      <input type="hidden" name="end_flag" value="1">
 
-    <button type="submit"
-      class="btn end bg-blue-800 text-white hover:bg-blue-700 focus:bg-blue-900 active:bg-blue-900 focus:ring-blue-500 px-4 py-2 rounded">
-      終了
-    </button>
-  </form>
+      <!-- ボタンを囲むdiv -->
+      <div class="flex justify-center gap-12 mb-8">
+        {{-- 開始ボタン --}}
+        <button class="bg-gray-600 text-white px-6 py-2 rounded-lg cursor-not-allowed opacity-60 w-32">
+          開始中
+        </button>
+
+        {{-- 終了ボタン --}}
+        <button type="submit"
+          class="bg-blue-800 text-white hover:bg-blue-700 focus:bg-blue-900 active:bg-blue-900 focus:ring-blue-500 px-6 py-2 rounded-lg w-32">
+          終了
+        </button>
+      </div>
+      <!-- 自己研鑽内容のテキストボックス -->
+      <div class="mb-6">
+        <label for="study_content" class="block text-gray-700 font-medium mb-2">自己研鑽内容</label>
+        <textarea id="study_content" name="study_content" rows="6"
+          class="w-full resize-y p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="例: 自己研鑽の内容を記載してください"></textarea>
+        @error('study_content')
+        <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+        @enderror
+      </div>
+    </form>
+  </div>
 </div>
 
 <div class="mt-6">
   {{-- todaySkillUpTimeRecord コンポーネントの呼び出し --}}
-  <x-today-skill-up-time-record :todaySkillUpTimeRecord="$todaySkillUpTime" />
+  <x-today-skill-up-time-record :todaySkillUpTimeAllRecords="$todaySkillUpTimeAllRecords" />
 </div>
 
 @endsection

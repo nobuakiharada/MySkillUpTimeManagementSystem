@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\TodaySkillUpTime;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
+use App\Models\TodaySkillUpTime;
+use App\Http\Requests\StoreSkillUpTimeRequest;
 
 class TodaySkillUpTimeController extends Controller
 {
@@ -16,39 +18,33 @@ class TodaySkillUpTimeController extends Controller
 
         // 今日のレコードだけ取得（ユーザーも限定）
         $todaySkillUpTimes = TodaySkillUpTime::where('user_id', $userId)
-            ->where('date', $today)
-            ->orderBy('start_time', 'asc')
-            ->get();
+            ->where('date', $today)->orderBy('id', 'desc')->get();
 
         return view('todayindex', compact('todaySkillUpTimes'));
     }
 
-    public function store(Request $request)
+    // 開始ボタン押下により、レコード作成
+    public function store(StoreSkillUpTimeRequest $request)
     {
         // バリデーション
-        $validated = $request->validate([
-            'user_name' => 'required|string|max:255',
-            'user_id' => 'required|integer',
-            'date' => 'required|date',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i',
-            'total_study_time' => 'nullable|integer',
-            'study_content' => 'nullable|string',
-            'start_flag' => 'required|in:0,1',
-            'break_flag' => 'required|in:0,1',
-            'end_flag' => 'required|in:0,1',
-        ]);
+        $validatedRequest = $request->validated();
+        // セッションに本日の自己研鑽情報がまだないときだけ新規作成・セッション保存
+        if (!Session::has('todaySkillUpTime')) {
+            $todaySkillUpTime = TodaySkillUpTime::create($validatedRequest);
+            Session::put('todaySkillUpTime', $todaySkillUpTime);
+        }
+        // 今日の日付の全データ取得
+        $userId = 1020;
+        $todaySkillUpTimeAllRecords = TodaySkillUpTime::getTodayRecords($userId);
 
-        // 新しい自己研鑽時間のレコードを作成
-        $todaySkillUpTime = TodaySkillUpTime::create($validated);
-
-        // start.blade.php を表示＋メッセージと登録内容を渡す
+        // start.blade.php を表示＋メッセージと本日の自己研鑽内容を渡す
         return view('start', [
             'message' => '自己研鑽が開始されました！',
-            'todaySkillUpTime' => $todaySkillUpTime,
+            'todaySkillUpTimeAllRecords' => $todaySkillUpTimeAllRecords,
         ]);
     }
 
+    //編集ボタン押下（修正）
     public function edit($id, Request $request)
     {
         // 指定したIDのデータを取得
@@ -64,30 +60,36 @@ class TodaySkillUpTimeController extends Controller
         return view('today.edit', compact('skillUpTime'));
     }
 
+    //終了ボタン押下
     public function update(Request $request, $id)
     {
-        // バリデーション
-        $validated = $request->validate([
-            'user_name' => 'required|string|max:255',
-            'user_id' => 'required|integer',
-            'date' => 'required|date',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i',
-            'total_study_time' => 'nullable|integer',
-            'study_content' => 'nullable|string',
-            'start_flag' => 'required|in:0,1',
-            'break_flag' => 'required|in:0,1',
-            'end_flag' => 'required|in:0,1',
-        ]);
+        $skillUpTime = TodaySkillUpTime::findOrFail($id); // 指定したIDのデータを取得
+        // リクエストから必要なデータのみを取得
+        $data = $request->only(['start_flag', 'end_flag', 'study_content']);
 
-        // 指定したIDのデータを取得
-        $skillUpTime = TodaySkillUpTime::findOrFail($id);
+        $startTime = Carbon::parse($skillUpTime->start_time);  // レコードのstart_time
+        $endTime = Carbon::now()->format('H:i');  // 現在時刻を取得
+        // start_timeとend_timeの差分を計算（分単位）
+        $todayStudyTime = $startTime->diffInMinutes($endTime);
+        // 差分をdataに追加
+        $data['total_study_time'] = $todayStudyTime;
+        $data['end_time'] = $endTime;
+
 
         // 取得したデータを更新
-        $skillUpTime->update($validated);
+        $skillUpTime->update($data);
+        // セッションから 'todaySkillUpTime' を削除
+        Session::forget('todaySkillUpTime');
 
-        // 更新後にホーム画面へリダイレクト
-        return redirect()->route('home')->with('success', '自己研鑽時間が更新されました！');
+        // 今日の日付の総勉強時間を合計
+        $userId = 1020;
+        $totalStudyTime = TodaySkillUpTime::getTotalStudyTimeForToday($userId);
+
+        // end.blade.php を表示＋メッセージと本日の総自己研鑽時間を渡す
+        return view('end', [
+            'message' => '自己研鑽を終了しました。',
+            'totalStudyTime' => $totalStudyTime,
+        ]);
     }
 
     public function destroy($id)

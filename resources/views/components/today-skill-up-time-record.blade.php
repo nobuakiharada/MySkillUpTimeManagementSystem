@@ -1,40 +1,37 @@
 <div class="mt-6">
-  {{-- 本日の自己研鑽情報を表形式での表示 --}}
-  <table class="table-auto w-full text-center border-collapse border border-gray-300">
+  <!-- タイトルの追加 -->
+  <h2 class="text-3xl font-semibold text-center mb-4">本日の自己研鑽状況（最新５件）</h2>
+
+  {{-- 自己研鑽情報の表 --}}
+  <table class="table-auto w-full text-center border-collapse border border-gray-300 rounded-lg shadow-lg">
     <thead>
       <tr>
-        <th class="border border-gray-300 px-4 py-2">項目</th>
-        <th class="border border-gray-300 px-4 py-2">内容</th>
+        <th class="border border-gray-300 px-6 py-3 bg-gray-100 text-lg">ID</th>
+        <th class="border border-gray-300 px-6 py-3 bg-gray-100 text-lg">日付</th>
+        <th class="border border-gray-300 px-6 py-3 bg-gray-100 text-lg">ユーザー名</th>
+        <th class="border border-gray-300 px-6 py-3 bg-gray-100 text-lg">開始時間</th>
+        <th class="border border-gray-300 px-6 py-3 bg-gray-100 text-lg">終了時間</th>
+        <th class="border border-gray-300 px-6 py-3 bg-gray-100 text-lg">総研鑽時間</th>
+        <th class="border border-gray-300 px-6 py-3 bg-gray-100 text-lg">研鑽内容</th>
       </tr>
     </thead>
     <tbody>
+      @foreach ($todaySkillUpTimeAllRecords as $todayRecord)
       <tr>
-        <td class="border border-gray-300 px-4 py-2">日付</td>
-        <td class="border border-gray-300 px-4 py-2">{{ $todaySkillUpTimeRecord['date'] }}</td>
+        <td class="border border-gray-300 px-4 py-3">{{ $todayRecord->id }}</td>
+        <td class="border border-gray-300 px-4 py-3">{{ $todayRecord->date }}</td>
+        <td class="border border-gray-300 px-4 py-3">{{ $todayRecord->user_name }}</td>
+        <td class="border border-gray-300 px-4 py-3">{{ $todayRecord->start_time }}</td>
+        <td class="border border-gray-300 px-4 py-3 
+          {{ $todayRecord->end_time === null || $todayRecord->end_time === '未設定' ? 'text-red-600 font-bold' : '' }}">
+          {{ $todayRecord->end_time ?? '未設定' }}
+        </td>
+        <td class="border border-gray-300 px-4 py-3">{{ $todayRecord->total_study_time ?? '未設定' }}</td>
+        <td class="border border-gray-300 px-4 py-3 text-left whitespace-pre-wrap">
+          {{ $todayRecord->study_content ?? '未設定' }}
+        </td>
       </tr>
-      <tr>
-        <td class="border border-gray-300 px-4 py-2">ユーザー名</td>
-        <td class="border border-gray-300 px-4 py-2">{{ $todaySkillUpTimeRecord['user_name'] }}</td>
-      </tr>
-      <tr>
-        <td class="border border-gray-300 px-4 py-2">開始時間</td>
-        <td class="border border-gray-300 px-4 py-2">{{ $todaySkillUpTimeRecord['start_time'] }}</td>
-      </tr>
-      <tr>
-        <td class="border border-gray-300 px-4 py-2">終了時間</td>
-        <td class="border border-gray-300 px-4 py-2">{{ $todaySkillUpTimeRecord['end_time'] ?? '未設定' }}</td>
-      </tr>
-      <tr>
-        <td class="border border-gray-300 px-4 py-2">総勉強時間</td>
-        <td class="border border-gray-300 px-4 py-2">{{ $todaySkillUpTimeRecord['total_study_time'] ?? '未設定' }}</td>
-      </tr>
+      @endforeach
     </tbody>
   </table>
-</div>
-
-{{-- study_contentを広めのテキストボックスで表示 --}}
-<div class="mt-6">
-  <label for="study_content" class="block text-lg font-medium">勉強内容</label>
-  <textarea id="study_content" class="w-full h-40 border border-gray-300 p-2"
-    readonly>{{ $todaySkillUpTimeRecord['study_content'] ?? '未設定' }}</textarea>
 </div>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 //use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class TodaySkillUpTime extends Model
 {
@@ -23,4 +24,47 @@ class TodaySkillUpTime extends Model
         'break_flag',
         'end_flag',
     ];
+
+
+    /**
+     * 今日の最新レコードを取得（ユーザーID指定）
+     *
+     * @param int $userId
+     * @return \App\Models\TodaySkillUpTime|null
+     */
+    public static function getLatestRecordForToday($userId)
+    {
+        return self::where('user_id', $userId)
+            ->whereDate('date', Carbon::today())
+            ->orderBy('id', 'desc')
+            ->first();
+    }
+
+    /**
+     * 今日の日付の全データを取得（ユーザーID指定、最大5件）
+     *
+     * @param int $userId
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public static function getTodayRecords($userId)
+    {
+        return self::where('user_id', $userId)
+            ->whereDate('date', Carbon::today())
+            ->orderByDesc('id')
+            ->take(5)
+            ->get();
+    }
+
+    /**
+     * 今日の総勉強時間を取得
+     *
+     * @param int $userId
+     * @return float
+     */
+    public static function getTotalStudyTimeForToday(int $userId)
+    {
+        return self::where('user_id', $userId)
+            ->whereDate('date', Carbon::today())
+            ->sum('total_study_time');
+    }
 }

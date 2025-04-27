@@ -8,15 +8,15 @@ use Illuminate\View\Component;
 
 class TodaySkillUpTimeRecord extends Component
 {
-    public $todaySkillUpTimeRecord;
+  public $todaySkillUpTimeAllRecords;
 
-    public function __construct($todaySkillUpTimeRecord)
-    {
-        $this->todaySkillUpTimeRecord = $todaySkillUpTimeRecord;
-    }
+  public function __construct($todaySkillUpTimeAllRecords)
+  {
+    $this->todaySkillUpTimeAllRecords = $todaySkillUpTimeAllRecords;
+  }
 
-    public function render()
-    {
-        return view('components.today-skill-up-time-record');
-    }
+  public function render()
+  {
+    return view('components.today-skill-up-time-record');
+  }
 }
