@@ -30,9 +30,16 @@
   </button>
 </div>
 
+<div class="flex justify-center mt-6">
+  <a href="{{ route('skillUpResult') }}"
+    class="ml-40 bg-orange-600 text-white border-2 border-orange-600 px-4 py-2 rounded hover:bg-orange-500 focus:ring-2 focus:ring-orange-400">
+    日々の研鑽履歴
+  </a>
+</div>
+
 <div class="mt-6">
   {{-- $todaySkillUpTimeAllRecords があればコンポーネントを表示 --}}
-  @if($todaySkillUpTimeAllRecords)
+  @if($todaySkillUpTimeAllRecords->isNotEmpty())
   <x-today-skill-up-time-record :todaySkillUpTimeAllRecords="$todaySkillUpTimeAllRecords" />
   @else
   <p class="text-center text-gray-500">本日はまだ自己研鑽しておりません。</p>

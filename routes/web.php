@@ -10,11 +10,17 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // 本日の自己研鑽時間を管理する
 Route::get('/today', [TodaySkillUpTimeController::class, 'index'])->name('today.list');  // 一覧表示
-Route::get('/today/store', [TodaySkillUpTimeController::class, 'store'])->name('today.store'); // 新規登録
-Route::post('/today/store', [TodaySkillUpTimeController::class, 'store'])->name('today.store'); // 新規登録
-Route::get('/today/edit/{id}', [TodaySkillUpTimeController::class, 'edit'])->name('today.edit'); // 編集
+Route::get('/today/store', [TodaySkillUpTimeController::class, 'store'])->name('today.store'); // 開始
+Route::post('/today/store', [TodaySkillUpTimeController::class, 'store'])->name('today.store'); // 開始
 Route::post('/today/update/{id}', [TodaySkillUpTimeController::class, 'update'])->name('today.update'); // 更新（editの更新処理）
+Route::get('/today/edit/{id}', [TodaySkillUpTimeController::class, 'edit'])->name('today.edit'); // 編集
 Route::post('/today/destroy/{id}', [TodaySkillUpTimeController::class, 'destroy'])->name('today.destroy'); // 削除
+
+// 自己研鑽記録の新規登録
+Route::post('/today/register', [TodaySkillUpTimeController::class, 'register'])->name('register'); // 新規登録処理へ
+
+// 日々の研鑽一覧
+Route::get('/skillUpResult', [HomeController::class, 'skillUpList'])->name('skillUpResult'); // 総研鑽時間リスト表示
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

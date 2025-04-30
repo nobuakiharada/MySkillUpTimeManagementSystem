@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 use App\Models\TodaySkillUpTime;
+use App\Models\TodayTotalSkillUpTime;
 use App\Http\Requests\StoreSkillUpTimeRequest;
 
 class TodaySkillUpTimeController extends Controller
@@ -85,6 +86,18 @@ class TodaySkillUpTimeController extends Controller
         $userId = 1020;
         $totalStudyTime = TodaySkillUpTime::getTotalStudyTimeForToday($userId);
 
+        // 今日の日付の総勉強時間をDB登録
+        $record = new TodayTotalSkillUpTime();
+        $record->date = now()->toDateString();
+        $judgeResult = TodayTotalSkillUpTime::todayJudgment($totalStudyTime);
+        TodayTotalSkillUpTime::updateOrCreate(
+            ['date' => now()->toDateString()], // 検索条件（主キー）
+            [
+                'total_minutes' => $totalStudyTime,
+                'judge_flag' => $judgeResult ? '0' : '1',
+            ]
+        );
+
         // end.blade.php を表示＋メッセージと本日の総自己研鑽時間を渡す
         return view('end', [
             'message' => '自己研鑽を終了しました。',
@@ -97,6 +110,14 @@ class TodaySkillUpTimeController extends Controller
         // 指定したIDのデータを取得して削除
         $todaySkillUpTime = TodaySkillUpTime::findOrFail($id);
         $todaySkillUpTime->delete();
+
+        return view('delete', [
+            'message' => '１件の自己研鑽情報を削除しました。',
+        ]);
+    }
+
+    public function register()
+    {
 
         // 成功メッセージを付けてリダイレクト
         return redirect()->route('home')->with('success', '自己研鑽時間が削除されました！');
