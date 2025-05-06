@@ -45,24 +45,9 @@ class TodaySkillUpTimeController extends Controller
         ]);
     }
 
-    //編集ボタン押下（修正）
-    public function edit($id, Request $request)
-    {
-        // 指定したIDのデータを取得
-        $skillUpRecord = TodaySkillUpTime::findOrFail($id);
-
-        // 終了時に時間差を自動計算
-        if ($request->start_time && $request->end_time) {
-            $start = Carbon::createFromFormat('H:i', $request->start_time);
-            $end = Carbon::createFromFormat('H:i', $request->end_time);
-            $validated['total_study_time'] = $start->diffInMinutes($end);
-        }
-        // 編集フォームにデータを渡す
-        return view('today.edit', compact('skillUpTime'));
-    }
 
     //終了ボタン押下
-    public function update(Request $request, $id)
+    public function finish(Request $request, $id)
     {
         $skillUpTime = TodaySkillUpTime::findOrFail($id); // 指定したIDのデータを取得
         // リクエストから必要なデータのみを取得
@@ -105,18 +90,76 @@ class TodaySkillUpTimeController extends Controller
         ]);
     }
 
+    //編集ボタン押下（修正）
+    public function edit($id = null)
+    {
+        if ($id) {
+            // 指定IDのレコードを取得
+            $skillUpTime = TodaySkillUpTime::findOrFail($id);
+
+            return view('edit', compact('skillUpTime'));
+        }
+        return view('edit');
+    }
+
+    //本日の研鑽一覧より編集ボタン押下
+    public function update(Request $request, $id = null)
+    {
+        $data = $request->only(['user_name', 'user_id', 'date', 'start_time', 'end_time', 'study_content']);
+
+        if ($data['start_time'] && $data['end_time']) {
+            $startTime = Carbon::createFromFormat('H:i', $data['start_time']);
+            $endTime = Carbon::createFromFormat('H:i', $data['end_time']);
+            // start_timeとend_timeの差分を計算（分単位）
+            $totalStudyTime = $startTime->diffInMinutes($endTime);
+            // 差分をdataに追加
+            $data['total_study_time'] = $totalStudyTime;
+        }
+        if ($data['end_time']) {
+            $data['start_flag'] = '0';
+            $data['end_flag'] = '1';
+        } else {
+            $data['start_flag'] = '1';
+            $data['end_flag'] = '0';
+        }
+
+        $skillUpTime = null;
+        if ($id) {
+            $skillUpTime = TodaySkillUpTime::findOrFail($id); // 指定したIDのデータを取得
+            // 取得したデータを更新
+            $skillUpTime->update($data);
+        } else {
+            // 新規登録
+            TodaySkillUpTime::create($data);
+        }
+        // 今日の日付の総勉強時間を合計
+        $userId = $data['user_id'];
+        $date = $data['date'];
+        $dayTotalStudyTime = TodaySkillUpTime::getTotalStudyTimeForDay($userId, $date);
+
+        // 入力日付の総勉強時間をDB登録
+        $record = new TodayTotalSkillUpTime();
+        $record->date = $data['date'];
+        $judgeResult = TodayTotalSkillUpTime::todayJudgment($dayTotalStudyTime);
+        TodayTotalSkillUpTime::updateOrCreate(
+            ['date' => $data['date']], // 検索条件（主キー）
+            [
+                'total_minutes' => $dayTotalStudyTime,
+                'judge_flag' => $judgeResult ? '0' : '1',
+            ]
+        );
+        return redirect()->route('today.list')->with('message', '自己研鑽を修正しました。');
+    }
+
     public function destroy($id)
     {
         // 指定したIDのデータを取得して削除
         $todaySkillUpTime = TodaySkillUpTime::findOrFail($id);
         $todaySkillUpTime->delete();
-
-        return view('delete', [
-            'message' => '１件の自己研鑽情報を削除しました。',
-        ]);
+        return redirect()->route('today.list')->with('message', '１件の自己研鑽情報を削除しました。');
     }
 
-    public function register()
+    public function creat()
     {
 
         // 成功メッセージを付けてリダイレクト

@@ -3,6 +3,11 @@
 @section('content')
 <div class="container mx-auto px-4 py-6">
   <h2 class="text-2xl font-semibold text-center text-gray-800 mb-8">自己研鑽時間 一覧</h2>
+  @if (session('message'))
+  <div class="mb-4 p-3 bg-green-100 text-green-800 rounded">
+    {{ session('message') }}
+  </div>
+  @endif
 
   <div class="overflow-x-auto bg-white shadow-md rounded-lg mb-6">
     <table class="table-auto w-full text-sm text-left text-gray-700 border-collapse">
@@ -48,7 +53,7 @@
   <div class="flex justify-between items-center mt-6">
     <!-- 左下に新規登録ボタン -->
     <div class="flex justify-start">
-      <a href="{{ route('register') }}"
+      <a href="{{ route('today.create') }}"
         class="btn start bg-red-600 text-white hover:bg-red-500 focus:bg-red-700 active:bg-red-800 focus:ring-red-500 px-4 py-2 rounded">
         新規登録
       </a>

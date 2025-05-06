@@ -15,7 +15,7 @@ $sessionTodaySkillUpTime = session('todaySkillUpTime');
 
 <div class="mt-6">
   <div class="flex justify-center gap-12">
-    <form action="{{ route('today.update', ['id' => $sessionTodaySkillUpTime->id]) }}" method="POST"
+    <form action="{{ route('today.finish', ['id' => $sessionTodaySkillUpTime->id]) }}" method="POST"
       class="w-full max-w-full">
       @csrf
       <input type="hidden" name="user_name" value="harada">

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use App\Models\TodaySkillUpTime;
-use App\Models\TodayTotalSkillUpTime;
 
 class HomeController extends Controller
 {
@@ -34,13 +33,5 @@ class HomeController extends Controller
                 'todaySkillUpTimeAllRecords' => $todaySkillUpTimeAllRecords,
             ]);
         }
-    }
-
-    public function skillUpList()
-    {
-
-        $totalSkillUpTime = TodayTotalSkillUpTime::orderBy('date', 'desc')->paginate(30);
-
-        return view('skillUpList', compact('totalSkillUpTime'));
     }
 }

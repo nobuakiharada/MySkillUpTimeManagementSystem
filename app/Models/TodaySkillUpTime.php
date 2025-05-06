@@ -67,4 +67,17 @@ class TodaySkillUpTime extends Model
             ->whereDate('date', Carbon::today())
             ->sum('total_study_time');
     }
+
+    /**
+     * ある日の総勉強時間を取得
+     *
+     * @param int $userId
+     * @return float
+     */
+    public static function getTotalStudyTimeForDay(int $userId, $date)
+    {
+        return self::where('user_id', $userId)
+            ->whereDate('date', $date)
+            ->sum('total_study_time');
+    }
 }
