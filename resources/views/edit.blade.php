@@ -9,38 +9,28 @@
   <form action="{{ route('today.update', $skillUpTime->id ?? null) }}" method="POST">
     @csrf
 
-    <!-- ユーザー名 -->
+    <!-- ユーザー名（変更不可） -->
     <div class="mb-4">
       <label for="user_name" class="block text-gray-700 font-medium mb-1">ユーザー名</label>
-      <input type="text" name="user_name" id="user_name"
-        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <input type="text" name="user_name" id="user_name" readonly
+        class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 cursor-not-allowed"
         value="{{ old('user_name', $skillUpTime->user_name ?? '') }}">
-      @error('user_name')
-      <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-      @enderror
     </div>
 
-    @if (!isset($skillUpTime))
-    <!-- ユーザーID（新規登録時のみ表示） -->
+    <!-- ユーザーID（変更不可） -->
     <div class="mb-4">
       <label for="user_id" class="block text-gray-700 font-medium mb-1">ユーザーID</label>
-      <input type="number" name="user_id" id="user_id"
-        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-        value="{{ old('user_id') }}">
-      @error('user_id')
-      <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-      @enderror
+      <input type="number" name="user_id" id="user_id" readonly
+        class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 cursor-not-allowed"
+        value="{{ old('user_id', $skillUpTime->user_id ?? '') }}">
     </div>
-    @endif
-    <!-- 日付 -->
+
+    <!-- 日付（変更不可） -->
     <div class="mb-4">
       <label for="date" class="block text-gray-700 font-medium mb-1">日付</label>
-      <input type="date" name="date" id="date"
-        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <input type="date" name="date" id="date" readonly
+        class="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 cursor-not-allowed"
         value="{{ old('date', $skillUpTime->date ?? '') }}">
-      @error('date')
-      <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-      @enderror
     </div>
 
     <!-- 開始時間 -->
@@ -76,11 +66,11 @@
     </div>
 
     <!-- ボタン -->
-    <div class="flex justify-start mt-6">
+    <div class="flex justify-end mt-6">
       <button type="submit" class="bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700 transition">
         {{ isset($skillUpTime) ? '更新する' : '登録する' }}
       </button>
-      <a href="{{ route('home') }}"
+      <a href="{{ route('today.list') }}"
         class="ml-4 px-5 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-100 transition">
         キャンセル
       </a>

@@ -11,18 +11,29 @@ use App\Http\Requests\StoreSkillUpTimeRequest;
 
 class TodaySkillUpTimeController extends Controller
 {
-
-    public function index()
+    public function index(Request $request)
     {
-        $userId = 1020; // または auth()->id()
-        $today = now()->toDateString();
+        $userId = 1020; //$userId = Auth::id();
+        $selectedDate = $request->input('date', now()->toDateString());
 
-        // 今日のレコードだけ取得（ユーザーも限定）
+        // 指定日のレコードを取得
         $todaySkillUpTimes = TodaySkillUpTime::where('user_id', $userId)
-            ->where('date', $today)->orderBy('id', 'desc')->get();
+            ->where('date', $selectedDate)
+            ->orderBy('id', 'desc')
+            ->get();
 
-        return view('todayindex', compact('todaySkillUpTimes'));
+        // レコードがなければメッセージを保存
+        if ($todaySkillUpTimes->isEmpty()) {
+            session()->flash('message', $selectedDate . ' の記録はありません。');
+        }
+
+        // 合計学習時間と判定レコードを取得（なければnull）
+        $totalRecord = TodayTotalSkillUpTime::where('user_id', $userId)
+            ->where('date', $selectedDate)
+            ->first();
+        return view('todayindex', compact('todaySkillUpTimes', 'selectedDate', 'userId', 'totalRecord'));
     }
+
 
     // 開始ボタン押下により、レコード作成
     public function store(StoreSkillUpTimeRequest $request)
@@ -35,7 +46,7 @@ class TodaySkillUpTimeController extends Controller
             Session::put('todaySkillUpTime', $todaySkillUpTime);
         }
         // 今日の日付の全データ取得
-        $userId = 1020;
+        $userId = 1020; //$userId = Auth::id();
         $todaySkillUpTimeAllRecords = TodaySkillUpTime::getTodayRecords($userId);
 
         // start.blade.php を表示＋メッセージと本日の自己研鑽内容を渡す
@@ -68,20 +79,36 @@ class TodaySkillUpTimeController extends Controller
         Session::forget('todaySkillUpTime');
 
         // 今日の日付の総勉強時間を合計
-        $userId = 1020;
+        $userId = 1020; //$userId = Auth::id();
         $totalStudyTime = TodaySkillUpTime::getTotalStudyTimeForToday($userId);
 
-        // 今日の日付の総勉強時間をDB登録
-        $record = new TodayTotalSkillUpTime();
-        $record->date = now()->toDateString();
-        $judgeResult = TodayTotalSkillUpTime::todayJudgment($totalStudyTime);
-        TodayTotalSkillUpTime::updateOrCreate(
-            ['date' => now()->toDateString()], // 検索条件（主キー）
-            [
+        // 今日の日付の総勉強時間をDB登録or更新
+        $today = Carbon::today();
+        $judgeResult = TodayTotalSkillUpTime::totalStudyTimeJudgement($today, $totalStudyTime);
+        $today = now()->toDateString();
+
+        $record = TodayTotalSkillUpTime::where('user_id', $userId)
+            ->whereDate('date', $today)
+            ->first();
+
+        if ($record) {
+            // 既存レコードがある → update
+            TodayTotalSkillUpTime::where('user_id', $userId)
+                ->where('date', $today)
+                ->update([
+                    'total_minutes' => $totalStudyTime,
+                    'judge_flag' => $judgeResult ? '0' : '1',
+                    'updated_at' => now(), // timestamps を手動で
+                ]);
+        } else {
+            // レコードがない → insert
+            TodayTotalSkillUpTime::create([
+                'user_id' => $userId,
+                'date' => $today,
                 'total_minutes' => $totalStudyTime,
                 'judge_flag' => $judgeResult ? '0' : '1',
-            ]
-        );
+            ]);
+        };
 
         // end.blade.php を表示＋メッセージと本日の総自己研鑽時間を渡す
         return view('end', [
@@ -90,7 +117,8 @@ class TodaySkillUpTimeController extends Controller
         ]);
     }
 
-    //編集ボタン押下（修正）
+
+    //編集ボタン押下（編集画面表示）
     public function edit($id = null)
     {
         if ($id) {
@@ -102,7 +130,8 @@ class TodaySkillUpTimeController extends Controller
         return view('edit');
     }
 
-    //本日の研鑽一覧より編集ボタン押下
+
+    //編集画面より更新ボタン押下（修正）
     public function update(Request $request, $id = null)
     {
         $data = $request->only(['user_name', 'user_id', 'date', 'start_time', 'end_time', 'study_content']);
@@ -133,36 +162,56 @@ class TodaySkillUpTimeController extends Controller
             TodaySkillUpTime::create($data);
         }
         // 今日の日付の総勉強時間を合計
+        //$data['user_id'] = 1020;
         $userId = $data['user_id'];
         $date = $data['date'];
+        $judgementdate = Carbon::parse($data['date']);
         $dayTotalStudyTime = TodaySkillUpTime::getTotalStudyTimeForDay($userId, $date);
+        // 今日の日付の総勉強時間の判定
+        $judgeFlag = TodayTotalSkillUpTime::totalStudyTimeJudgement($judgementdate, $dayTotalStudyTime);
 
         // 入力日付の総勉強時間をDB登録
-        $record = new TodayTotalSkillUpTime();
-        $record->date = $data['date'];
-        $judgeResult = TodayTotalSkillUpTime::todayJudgment($dayTotalStudyTime);
-        TodayTotalSkillUpTime::updateOrCreate(
-            ['date' => $data['date']], // 検索条件（主キー）
-            [
+        // まずはレコードが存在するか確認（user_id と date で複合条件）
+        $record = TodayTotalSkillUpTime::where('user_id', $userId)
+            ->where('date', $date)
+            ->first();
+
+        if ($record) {
+            // 更新処理
+            TodayTotalSkillUpTime::where('user_id', $userId)
+                ->where('date', $date)
+                ->update([
+                    'total_minutes' => $dayTotalStudyTime,
+                    'judge_flag' => $judgeFlag ? '0' : '1',
+                ]);
+        } else {
+            // 新規作成処理
+            TodayTotalSkillUpTime::create([
+                'user_id' => $userId,
+                'date' => $date,
                 'total_minutes' => $dayTotalStudyTime,
-                'judge_flag' => $judgeResult ? '0' : '1',
-            ]
-        );
-        return redirect()->route('today.list')->with('message', '自己研鑽を修正しました。');
+                'judge_flag' => $judgeFlag ? '0' : '1',
+            ]);
+        }
+        return redirect()->route('today.list')->with('message', $date . 'の自己研鑽を修正しました。');
     }
 
+
+    // 自己研鑽記録の削除
     public function destroy($id)
     {
         // 指定したIDのデータを取得して削除
         $todaySkillUpTime = TodaySkillUpTime::findOrFail($id);
+        $date = $todaySkillUpTime->date;
         $todaySkillUpTime->delete();
-        return redirect()->route('today.list')->with('message', '１件の自己研鑽情報を削除しました。');
+        return redirect()->route('today.list')->with('message', $todaySkillUpTime->date . 'の自己研鑽を１件削除しました。');
     }
 
+
+    // 自己研鑽記録の新規登録
     public function creat()
     {
-
         // 成功メッセージを付けてリダイレクト
-        return redirect()->route('home')->with('success', '自己研鑽時間が削除されました！');
+        return redirect()->route('home')->with('message', '自己研鑽時間が登録されました！');
     }
 }

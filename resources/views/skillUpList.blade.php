@@ -3,9 +3,27 @@
 @section('content')
 <div class="container mx-auto px-4 py-6">
   <h1 class="text-2xl font-semibold text-center text-gray-800 mb-8">日々の自己研鑽一覧</h1>
-  @if(isset($message))
-  <div class="mt-4 text-green-600 text-center font-semibold">
-    {{ $message }}
+
+  @if (session('message'))
+  <div class="mt-4 text-green-600 font-semibold ml-10">
+    {{ session('message') }}
+  </div>
+  @endif
+
+  @if(isset($monthlyTotalMinutes))
+  @php
+  $hours = floor($monthlyTotalMinutes / 60);
+  $minutes = $monthlyTotalMinutes % 60;
+  @endphp
+  <div class="mt-4 mb-6 text-xl text-blue-600 font-semibold text-center ml-6">
+    {{ \Carbon\Carbon::parse($selectedMonth)->format('Y年m月') }} の総学習時間：
+    <span class="text-blue-700">{{ $hours }}時間{{ $minutes }}分</span>
+  </div>
+  @endif
+
+  @if(isset($userId))
+  <div class="text-right text-sm text-gray-600 mb-2">
+    ユーザーID：{{ $userId }}
   </div>
   @endif
 
@@ -15,7 +33,7 @@
       <thead class="bg-gray-100">
         <tr>
           <th class="px-4 py-2 border-b font-medium text-gray-800">日付</th>
-          <th class="px-4 py-2 border-b font-medium text-gray-800">総勉強時間（分）</th>
+          <th class="px-4 py-2 border-b font-medium text-gray-800">総学習時間（分）</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">判定</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">編集</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">削除</th>
@@ -28,9 +46,11 @@
           <td class="px-4 py-2 border-b">{{ $record->total_minutes }}</td>
           <td class="px-4 py-2 border-b">
             @if($record->judge_flag === '0')
-            <span class="text-green-600 font-semibold">優</span>
+            <span class="text-green-600 font-semibold">合格</span>
+            @elseif($record->judge_flag === '1')
+            <span class="text-red-600 font-semibold">努力不足</span>
             @else
-            <span class="text-red-600 font-semibold">劣</span>
+            <span class="text-yellow-600 font-semibold">不正値</span>
             @endif
           </td>
           <td class="px-4 py-2 border-b">
@@ -38,9 +58,9 @@
           </td>
           <td class="px-4 py-2 border-b">
             <form action="{{ route('skillUpResult.destroy', $record->date) }}" method="POST"
-              onsubmit="return confirm('本当に削除してもよろしいですか？');">
+              onsubmit="return confirm('本当に総学習時間をリセットしてもよろしいですか？');">
               @csrf
-              <button type="submit" class="text-red-600 hover:text-red-800">削除</button>
+              <button type="submit" class="text-red-600 hover:text-red-800">リセット</button>
             </form>
           </td>
         </tr>
@@ -58,10 +78,16 @@
 
   <div class="flex justify-between items-center mt-6">
     <div class="flex justify-start">
-      <a href="{{ route('skillUpResult.register') }}"
-        class="btn start bg-red-600 text-white hover:bg-red-500 focus:bg-red-700 active:bg-red-800 focus:ring-red-500 px-4 py-2 rounded">
-        新規登録
-      </a>
+      <form method="GET" action="{{ route('skillUpResult') }}" class="flex items-center">
+        <label for="month" class="mr-2 text-gray-700">月選択：</label>
+        <select name="month" id="month" class="border rounded px-3 py-1" onchange="this.form.submit()">
+          @foreach($months as $month)
+          <option value="{{ $month }}" {{ $month == $selectedMonth ? 'selected' : '' }}>
+            {{ \Carbon\Carbon::parse($month)->format('Y年m月') }}
+          </option>
+          @endforeach
+        </select>
+      </form>
     </div>
 
     <div class="flex justify-end">
