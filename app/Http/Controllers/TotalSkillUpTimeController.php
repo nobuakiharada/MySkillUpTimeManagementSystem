@@ -11,15 +11,10 @@ use App\Models\TodayTotalSkillUpTime;
 
 class TotalSkillUpTimeController extends Controller
 {
+    // 自己研鑽まとめ一覧表示
     public function index(Request $request)
     {
         $userId = 1020;
-
-        // 欠損日補完（失敗時はエラーメッセージ付きで戻す）
-        // $result = TodayTotalSkillUpTime::fillMissingDates($userId);
-        // if (!$result) {
-        //     return redirect()->back()->with('message', '欠損日の補完中にエラーが発生しました。');
-        // }
 
         // 月リスト生成（例：過去12ヶ月分）
         $months = collect();
@@ -44,9 +39,6 @@ class TotalSkillUpTimeController extends Controller
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->sum('total_minutes');
 
-        // ユーザーの全学習日の総学習記録を再登録する処理
-        // TodayTotalSkillUpTime::calculateAndSaveDailyStudyJudgments($userId);
-
         return view('skillUpList', compact(
             'totalSkillUpTime',
             'months',
@@ -56,6 +48,8 @@ class TotalSkillUpTimeController extends Controller
         ));
     }
 
+
+    // 自己研鑽まとめ情報の登録
     public function store(Request $request)
     {
         $userId = 1020; //$userId = Auth::id();
@@ -80,6 +74,8 @@ class TotalSkillUpTimeController extends Controller
         return redirect()->route('skillUpResult')->with('message', '研鑽記録を登録しました。');
     }
 
+
+    // 自己研鑽まとめ情報の編集画面表示
     public function edit($date)
     {
         $userId = 1020; // 本来は Auth::id() などを使う
@@ -90,6 +86,8 @@ class TotalSkillUpTimeController extends Controller
         return view('totalSkillUpTime.edit', compact('record'));
     }
 
+
+    // 自己研鑽まとめ情報の修正
     public function update(Request $request, $date)
     {
         $userId = 1020;
@@ -117,6 +115,8 @@ class TotalSkillUpTimeController extends Controller
         return redirect()->route('skillUpResult')->with('message', $date . ' の総学習時間を修正しました。');
     }
 
+
+    // 自己研鑽まとめ情報の削除
     public function destroy($date)
     {
         $userId = 1020; //$userId = Auth::id();
@@ -127,5 +127,28 @@ class TotalSkillUpTimeController extends Controller
             ->delete();
 
         return redirect()->route('skillUpResult')->with('message', $date . ' の総学習時間をリセットしました。');
+    }
+
+
+    // 特殊ボタン処理（未研鑽日登録・総自己研鑽時間更新）
+    public function uniqueButton(Request $request, $type)
+    {
+        $userId = 1020; //$userId = Auth::id();
+        $selectedMonth = $request->query('month');
+
+        if ($type === 'unstudySave') {
+            $result = TodayTotalSkillUpTime::fillMissingDates($userId, $selectedMonth);
+            if (!$result) {
+                return redirect()->back()->with('message', '欠損日の補完中にエラーが発生しました。');
+            }
+            return redirect()->back()->with('message', "{$selectedMonth} の未研鑽日を正常に登録しました。");
+        }
+
+        if ($type === 'reRegister') {
+            TodayTotalSkillUpTime::calculateAndSaveDailyStudyJudgments($userId, $selectedMonth);
+            return redirect()->back()->with('message', "{$selectedMonth} の総自己研鑽時間を再登録しました。");
+        }
+
+        return redirect()->back()->with('message', '無効な操作が指定されました。');
     }
 }

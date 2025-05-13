@@ -33,7 +33,7 @@
       <thead class="bg-gray-100">
         <tr>
           <th class="px-4 py-2 border-b font-medium text-gray-800">日付</th>
-          <th class="px-4 py-2 border-b font-medium text-gray-800">総学習時間（分）</th>
+          <th class="px-4 py-2 border-b font-medium text-gray-800">総自己研鑽時間（分）</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">判定</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">編集</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">削除</th>
@@ -77,7 +77,7 @@
   @endif
 
   <div class="flex justify-between items-center mt-6">
-    <div class="flex justify-start">
+    <div>
       <form method="GET" action="{{ route('skillUpResult') }}" class="flex items-center">
         <label for="month" class="mr-2 text-gray-700">月選択：</label>
         <select name="month" id="month" class="border rounded px-3 py-1" onchange="this.form.submit()">
@@ -89,13 +89,24 @@
         </select>
       </form>
     </div>
-
-    <div class="flex justify-end">
+    <div>
       <a href="{{ route('home') }}"
         class="bg-orange-600 text-white border-2 border-orange-600 px-4 py-2 rounded hover:bg-orange-500 focus:ring-2 focus:ring-orange-400">
         ホームへ戻る
       </a>
     </div>
+  </div>
+
+  <div class="flex justify-end mt-4 space-x-16">
+    <a href="{{ route('skillUpResult.uniqueButton', ['type' => 'unstudySave']) }}?month={{ $selectedMonth }}"
+      class="bg-red-600 text-white border-2 border-red-600 px-4 py-2 rounded hover:bg-red-500 focus:ring-2 focus:ring-red-600">
+      未研鑽日の登録
+    </a>
+    <a href="{{ route('skillUpResult.uniqueButton', ['type' => 'reRegister']) }}?month={{ $selectedMonth }}"
+      onclick="return confirm('本当に実行してもよろしいですか？');"
+      class="bg-red-800 text-white border-2 border-red-600 px-4 py-2 rounded hover:bg-red-700 focus:ring-2 focus:ring-red-600">
+      自己研鑽情報の再登録
+    </a>
   </div>
 </div>
 @endsection

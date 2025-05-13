@@ -29,6 +29,7 @@ Route::post('/skillUpResult/destroy/{date}', [TotalSkillUpTimeController::class,
 Route::get('/skillUpResult/register', [TotalSkillUpTimeController::class, 'register'])->name('skillUpResult.register'); // 新規登録画面
 Route::get('/skillUpResult/store', [TotalSkillUpTimeController::class, 'store'])->name('skillUpResult.store'); // 新規登録
 Route::post('/skillUpResult/store', [TotalSkillUpTimeController::class, 'store'])->name('skillUpResult.store'); // 新規登録
+Route::get('/skillUpResult/unique/{type}', [TotalSkillUpTimeController::class, 'uniqueButton'])->name('skillUpResult.uniqueButton'); // 特殊ボタン
 
 
 

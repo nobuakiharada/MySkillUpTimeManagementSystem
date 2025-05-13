@@ -30,86 +30,72 @@ class TodayTotalSkillUpTime extends Model
     ];
 
     // ユーザーの欠損日(未学習日)の補完関処理
-    public static function fillMissingDates(int $userId): bool
+    public static function fillMissingDates(int $userId, string $month): bool
     {
-        $oldestRecord = self::where('user_id', $userId)->orderBy('date')->first();
-        if (!$oldestRecord) {
-            return true; // ユーザーにまだ1件もデータがない場合は何もしない
-        }
+        try {
+            $startDate = Carbon::parse($month)->startOfMonth();
+            $yesterday = Carbon::yesterday();
+            $endOfMonth = Carbon::parse($month)->endOfMonth();
 
-        $startDate = Carbon::parse($oldestRecord->date);
-        $endDate = Carbon::today();
+            // 「昨日」と「選択月の月末」のうち、早い方を上限にする
+            $endDate = $yesterday->lt($endOfMonth) ? $yesterday : $endOfMonth;
 
-        $existingDates = self::where('user_id', $userId)->pluck('date')->toArray();
+            // 対象月の既存日付
+            $existingDates = self::where('user_id', $userId)
+                ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+                ->pluck('date')
+                ->toArray();
 
-        $datesToInsert = [];
-        for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-            if (!in_array($date->toDateString(), $existingDates)) {
-                $datesToInsert[] = [
-                    'user_id' => $userId,
-                    'date' => $date->toDateString(),
-                    'total_minutes' => 0,
-                    'judge_flag' => '1', // デフォルトは「劣」
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+            $datesToInsert = [];
+
+            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+                if (!in_array($date->toDateString(), $existingDates)) {
+                    $datesToInsert[] = [
+                        'user_id' => $userId,
+                        'date' => $date->toDateString(),
+                        'total_minutes' => 0,
+                        'judge_flag' => '1', // 努力不足
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
             }
-        }
 
-        if (!empty($datesToInsert)) {
-            try {
-                DB::table((new self)->getTable())->insert($datesToInsert);
-            } catch (\Exception $e) {
-                Log::error("日付補完エラー（user_id={$userId}）", [
-                    'error' => $e->getMessage(),
-                ]);
-                return false;
+            if (!empty($datesToInsert)) {
+                self::insert($datesToInsert);
             }
-        }
 
-        return true;
+            return true;
+        } catch (\Exception $e) {
+            Log::error('欠損日補完エラー: ' . $e->getMessage());
+            return false;
+        }
     }
 
     // ユーザーの全学習日の総学習記録を再登録する処理
-    public static function calculateAndSaveDailyStudyJudgments($userId)
+    public static function calculateAndSaveDailyStudyJudgments(int $userId, string $month)
     {
-        $startDate = TodaySkillUpTime::where('user_id', $userId)
-            ->orderBy('date', 'asc')
-            ->value('date'); // 最も古い日付を1つ取得
+        // 指定月の開始日と終了日（昨日まで）
+        $startDate = Carbon::parse($month)->startOfMonth();
+        $yesterday = Carbon::yesterday();
+        $endOfMonth = Carbon::parse($month)->endOfMonth();
+        $endDate = $yesterday->lt($endOfMonth) ? $yesterday : $endOfMonth;
 
-        $endDate = Carbon::today()->toDateString(); // 今日
-
-        if ($startDate) {
-            $period = CarbonPeriod::create($startDate, $endDate);
-            $dates = collect($period)->map(fn($date) => $date->toDateString());
-        } else {
-            $dates = collect(); // ユーザーに記録がない場合は空
-        }
+        $period = CarbonPeriod::create($startDate, $endDate);
+        $dates = collect($period)->map(fn($date) => $date->toDateString());
 
         foreach ($dates as $date) {
-            // 指定日の総勉強時間を取得
+            // 指定日の総勉強時間を取得（nullなら0扱い）
             $totalStudyTime = TodaySkillUpTime::getTotalStudyTimeForDay($userId, $date) ?? 0;
 
             // 曜日判定（日曜=0, 土曜=6）
             $dayOfWeek = Carbon::parse($date)->dayOfWeek;
             $isWeekend = ($dayOfWeek === 0 || $dayOfWeek === 6); // 土日
 
-            // 平日60分以上 / 休日150分以上なら合格（judge_flag=1）
+            // 判定ロジック：平日60分 / 休日150分
             $judgeFlag = ($isWeekend && $totalStudyTime >= 150) || (!$isWeekend && $totalStudyTime >= 60) ? '0' : '1';
 
-            // 更新または作成
-            // TodayTotalSkillUpTime::updateOrCreate(
-            //     [
-            //         'user_id' => $userId,
-            //         'date' => $date->toDateString(),
-            //     ],
-            //     [
-            //         'total_minutes' => (int)$totalStudyTime,
-            //         'judge_flag' => $judgeFlag,
-            //     ]
-            // );
-
-            // 更新
+            // データ更新（存在前提）
             TodayTotalSkillUpTime::where('user_id', $userId)
                 ->whereDate('date', $date)
                 ->update([
