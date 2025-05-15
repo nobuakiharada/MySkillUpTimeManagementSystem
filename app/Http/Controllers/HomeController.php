@@ -15,23 +15,17 @@ class HomeController extends Controller
         $newSkillUpTimeRecord = TodaySkillUpTime::getLatestRecordForToday($userId);
         // 今日の自己研鑽情報を5件取得
         $todaySkillUpTimeAllRecords = TodaySkillUpTime::getTodayRecords($userId);
+        Session::put('todaySkillUpTimeAllRecords', $todaySkillUpTimeAllRecords);
 
         $justNow = false;
-        if ($newSkillUpTimeRecord?->start_flag == "1") {
+        $message = '本日の自己研鑽を開始しましょう！';
+        if ($newSkillUpTimeRecord?->start_flag === "1" || Session::has('todaySkillUpTime')) {
             $justNow = true;
-        } else if (Session::has('todaySkillUpTime')) {
-            $justNow = true;
+            $message = '自己研鑽が開始されてます！！';
         }
+        session()->put('justNow', $justNow);
+        session()->put('message', $message);
 
-        if ($justNow) {
-            return view('start', [
-                'message' => '自己研鑽が開始されてます！！',
-                'todaySkillUpTimeAllRecords' => $todaySkillUpTimeAllRecords,
-            ]);
-        } else {
-            return view('home', [
-                'todaySkillUpTimeAllRecords' => $todaySkillUpTimeAllRecords,
-            ]);
-        }
+        return view('home');
     }
 }

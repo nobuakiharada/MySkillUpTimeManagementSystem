@@ -45,15 +45,16 @@ class TodaySkillUpTimeController extends Controller
             $todaySkillUpTime = TodaySkillUpTime::create($validatedRequest);
             Session::put('todaySkillUpTime', $todaySkillUpTime);
         }
-        // 今日の日付の全データ取得
-        $userId = 1020; //$userId = Auth::id();
-        $todaySkillUpTimeAllRecords = TodaySkillUpTime::getTodayRecords($userId);
+        // セッションに今日の日付の５データ情報がなければ改めて取得
+        if (!Session::has('todaySkillUpTimeAllRecords')) {
+            $userId = 1020; // または Auth::id();
+            $todaySkillUpTimeAllRecords = TodaySkillUpTime::getTodayRecords($userId);
+            if ($todaySkillUpTimeAllRecords) {
+                Session::put('todaySkillUpTimeAllRecords', $todaySkillUpTimeAllRecords);
+            }
+        }
 
-        // start.blade.php を表示＋メッセージと本日の自己研鑽内容を渡す
-        return view('start', [
-            'message' => '自己研鑽が開始されました！',
-            'todaySkillUpTimeAllRecords' => $todaySkillUpTimeAllRecords,
-        ]);
+        return redirect()->route('home')->with('message', '自己研鑽が開始されました！');
     }
 
 
