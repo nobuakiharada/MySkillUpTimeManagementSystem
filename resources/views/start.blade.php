@@ -1,4 +1,4 @@
-@extends('layouts.app')
+<!-- @extends('layouts.app')
 
 @section('content')
 <h1 class="text-3xl font-bold text-center mt-100">自己研鑽-時間管理システム</h1>
@@ -24,7 +24,7 @@ $sessionTodaySkillUpTime = session('todaySkillUpTime');
       <input type="hidden" name="end_flag" value="1">
 
       <!-- ボタンを囲むdiv -->
-      <div class="flex justify-center gap-12 mb-8">
+<!-- <div class="flex justify-center gap-12 mb-8">
         {{-- 開始ボタン --}}
         <button class="bg-gray-600 text-white px-6 py-2 rounded-lg cursor-not-allowed opacity-60 w-32">
           開始中
@@ -37,7 +37,7 @@ $sessionTodaySkillUpTime = session('todaySkillUpTime');
         </button>
       </div>
       <!-- 自己研鑽内容のテキストボックス -->
-      <div class="mb-6">
+<!-- <div class="mb-6">
         <label for="study_content" class="block text-gray-700 font-medium mb-2">自己研鑽内容</label>
         <textarea id="study_content" name="study_content" rows="6"
           class="w-full resize-y p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -55,4 +55,4 @@ $sessionTodaySkillUpTime = session('todaySkillUpTime');
   <x-today-skill-up-time-record :todaySkillUpTimeAllRecords="$todaySkillUpTimeAllRecords" />
 </div>
 
-@endsection
+@endsection --> --> -->

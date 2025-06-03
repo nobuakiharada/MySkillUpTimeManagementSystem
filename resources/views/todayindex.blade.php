@@ -6,7 +6,8 @@
   <!-- 日付セレクトフォーム -->
   <form method="GET" action="{{ route('today.list') }}" class="mb-6 text-center">
     <label for="date" class="mr-2 font-medium text-gray-700">表示日：</label>
-    <input type="date" name="date" id="date" value="{{ $selectedDate }}" class="border px-3 py-2 rounded" />
+    <input type="date" name="date" id="date" value="{{ old('date', $selectedDate) }}"
+      class="border px-3 py-2 rounded" />
     <button type="submit" class="ml-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500">
       表示
     </button>
@@ -14,8 +15,12 @@
 
   <h2 class="text-2xl font-semibold text-center text-gray-800 mb-8">自己研鑽時間 一覧</h2>
 
-  @if (session('message'))
-  <div class="mt-4 text-green-600 font-semibold ml-10">
+  @if(session('changeMessage'))
+  <div class="text-left mt-4 text-green-600 font-semibold">
+    {{ session('changeMessage') }}
+  </div>
+  @elseif(session('message'))
+  <div class="text-left mt-4 text-green-600 font-semibold">
     {{ session('message') }}
   </div>
   @endif
@@ -25,15 +30,27 @@
   $hours = floor($totalRecord->total_minutes / 60);
   $minutes = $totalRecord->total_minutes % 60;
   @endphp
-  <div class="mb-6 flex items-center">
-    <!-- 中央：総学習時間 -->
-    <div class="flex-1 text-center text-xl text-blue-600 font-semibold">
+
+  <!-- 上段：総学習時間 + 休憩時間 -->
+  <div class="mb-2 flex justify-center items-center space-x-12">
+    <!-- 総学習時間 -->
+    <div class="text-xl text-blue-600 font-semibold">
       {{ $selectedDate }} の総学習時間：
       <span class="text-blue-700">{{ $hours }}時間{{ $minutes }}分</span>
     </div>
 
-    <!-- 右：判定 -->
-    <div class="text-lg font-semibold text-right min-w-[120px]">
+    <!-- 休憩時間（あれば） -->
+    @isset($totalBreakTime)
+    <div class="text-xl text-gray-600 font-semibold">
+      休憩時間：
+      <span class="text-gray-900">{{ $totalBreakTime }} 分</span>
+    </div>
+    @endisset
+  </div>
+
+  <!-- 下段：判定（右寄せ） -->
+  <div class="mb-6 flex justify-end">
+    <div class="text-lg font-semibold min-w-[120px]">
       判定：
       @if($totalRecord->judge_flag === '0')
       <span class="text-green-600">合格</span>

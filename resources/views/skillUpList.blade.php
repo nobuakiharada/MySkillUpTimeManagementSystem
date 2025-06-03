@@ -4,9 +4,9 @@
 <div class="container mx-auto px-4 py-6">
   <h1 class="text-2xl font-semibold text-center text-gray-800 mb-8">日々の自己研鑽一覧</h1>
 
-  @if (session('message'))
+  @if(session('summaryMessage'))
   <div class="mt-4 text-green-600 font-semibold ml-10">
-    {{ session('message') }}
+    {{ session('summaryMessage') }}
   </div>
   @endif
 
@@ -34,6 +34,7 @@
         <tr>
           <th class="px-4 py-2 border-b font-medium text-gray-800">日付</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">総自己研鑽時間（分）</th>
+          <th class="px-4 py-2 border-b font-medium text-gray-800">総休憩時間（分）</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">判定</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">編集</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">削除</th>
@@ -44,6 +45,11 @@
         <tr class="hover:bg-gray-50">
           <td class="px-4 py-2 border-b">{{ $record->date }}</td>
           <td class="px-4 py-2 border-b">{{ $record->total_minutes }}</td>
+          @if(isset($monthlyBreakTime[$record->date]))
+          <td class="px-4 py-2 border-b">{{ $monthlyBreakTime[$record->date]}}</td>
+          @else
+          <td class="px-4 py-2 border-b"> 0 </td>
+          @endif
           <td class="px-4 py-2 border-b">
             @if($record->judge_flag === '0')
             <span class="text-green-600 font-semibold">合格</span>
@@ -60,7 +66,7 @@
             <form action="{{ route('skillUpResult.destroy', $record->date) }}" method="POST"
               onsubmit="return confirm('本当に総学習時間をリセットしてもよろしいですか？');">
               @csrf
-              <button type="submit" class="text-red-600 hover:text-red-800">リセット</button>
+              <button type="submit" class="text-red-600 hover:text-red-800">削除</button>
             </form>
           </td>
         </tr>
@@ -82,8 +88,8 @@
         <label for="month" class="mr-2 text-gray-700">月選択：</label>
         <select name="month" id="month" class="border rounded px-3 py-1" onchange="this.form.submit()">
           @foreach($months as $month)
-          <option value="{{ $month }}" {{ $month == $selectedMonth ? 'selected' : '' }}>
-            {{ \Carbon\Carbon::parse($month)->format('Y年m月') }}
+          <option value="{{ $month->format('Y-m') }}" {{ $month->format('Y-m') == $selectedMonth ? 'selected' : '' }}>
+            {{ $month->format('Y年m月') }}
           </option>
           @endforeach
         </select>

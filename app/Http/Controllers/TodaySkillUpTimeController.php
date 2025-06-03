@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\View;
 use App\Models\TodaySkillUpTime;
 use App\Models\TodayTotalSkillUpTime;
+use App\Models\BreakTime;
 use App\Http\Requests\StoreSkillUpTimeRequest;
 
 class TodaySkillUpTimeController extends Controller
@@ -22,27 +24,41 @@ class TodaySkillUpTimeController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
+        // 指定日のレコードを取得
+        $breakTime = BreakTime::where('user_id', $userId)
+            ->where('today', $selectedDate)
+            ->first();
+        $totalBreakTime = $breakTime?->total_break_time ?? 0;
+
         // レコードがなければメッセージを保存
         if ($todaySkillUpTimes->isEmpty()) {
             session()->flash('message', $selectedDate . ' の記録はありません。');
+        } else {
+            session::put('message', $selectedDate . 'の研鑽一覧です。');
         }
 
         // 合計学習時間と判定レコードを取得（なければnull）
         $totalRecord = TodayTotalSkillUpTime::where('user_id', $userId)
             ->where('date', $selectedDate)
             ->first();
-        return view('todayindex', compact('todaySkillUpTimes', 'selectedDate', 'userId', 'totalRecord'));
+
+
+        return view('todayindex', compact('todaySkillUpTimes', 'selectedDate', 'userId', 'totalRecord', 'totalBreakTime'));
     }
 
 
     // 開始ボタン押下により、レコード作成
-    public function store(StoreSkillUpTimeRequest $request)
+    public function store(Request $request)
     {
         // バリデーション
-        $validatedRequest = $request->validated();
+        // $validatedRequest = $request->validated();
+        $data = $request->all();
+        $startTime = Carbon::now()->format('H:i');
+        $data['start_time'] = $startTime;
+
         // セッションに本日の自己研鑽情報がまだないときだけ新規作成・セッション保存
         if (!Session::has('todaySkillUpTime')) {
-            $todaySkillUpTime = TodaySkillUpTime::create($validatedRequest);
+            $todaySkillUpTime = TodaySkillUpTime::create($data);
             Session::put('todaySkillUpTime', $todaySkillUpTime);
         }
         // セッションに今日の日付の５データ情報がなければ改めて取得
@@ -54,14 +70,19 @@ class TodaySkillUpTimeController extends Controller
             }
         }
 
-        return redirect()->route('home')->with('message', '自己研鑽が開始されました！');
+        return redirect()->route('home');
     }
 
 
     //終了ボタン押下
-    public function finish(Request $request, $id)
+    public function finish(Request $request, $id = null)
     {
-        $skillUpTime = TodaySkillUpTime::findOrFail($id); // 指定したIDのデータを取得
+        if ($id) {
+            $skillUpTime = TodaySkillUpTime::findOrFail($id); // 指定したIDのデータを取得
+        } else {
+            $userId = 1020; // または auth()->id()
+            $skillUpTime = TodaySkillUpTime::getLatestRecordForToday($userId);
+        }
         // リクエストから必要なデータのみを取得
         $data = $request->only(['start_flag', 'end_flag', 'study_content']);
 
@@ -78,6 +99,7 @@ class TodaySkillUpTimeController extends Controller
         $skillUpTime->update($data);
         // セッションから 'todaySkillUpTime' を削除
         Session::forget('todaySkillUpTime');
+        Session::forget('breakMessage');
 
         // 今日の日付の総勉強時間を合計
         $userId = 1020; //$userId = Auth::id();
@@ -85,36 +107,24 @@ class TodaySkillUpTimeController extends Controller
 
         // 今日の日付の総勉強時間をDB登録or更新
         $today = Carbon::today();
-        $judgeResult = TodayTotalSkillUpTime::totalStudyTimeJudgement($today, $totalStudyTime);
-        $today = now()->toDateString();
+        TodayTotalSkillUpTime::upsertTotalStudyTime($userId, $today, $totalStudyTime);
 
-        $record = TodayTotalSkillUpTime::where('user_id', $userId)
-            ->whereDate('date', $today)
-            ->first();
-
-        if ($record) {
-            // 既存レコードがある → update
-            TodayTotalSkillUpTime::where('user_id', $userId)
-                ->where('date', $today)
-                ->update([
-                    'total_minutes' => $totalStudyTime,
-                    'judge_flag' => $judgeResult ? '0' : '1',
-                    'updated_at' => now(), // timestamps を手動で
-                ]);
+        // 今日の休憩時間
+        $breakTime = BreakTime::where([
+            ['today', '=', $today->toDateString()],
+            ['user_id', '=', $userId],
+        ])->first();
+        if ($breakTime) {
+            $totalBreakTime = $breakTime->total_break_time;
         } else {
-            // レコードがない → insert
-            TodayTotalSkillUpTime::create([
-                'user_id' => $userId,
-                'date' => $today,
-                'total_minutes' => $totalStudyTime,
-                'judge_flag' => $judgeResult ? '0' : '1',
-            ]);
-        };
+            $totalBreakTime = 0;
+        }
 
         // end.blade.php を表示＋メッセージと本日の総自己研鑽時間を渡す
         return view('end', [
             'message' => '自己研鑽を終了しました。',
             'totalStudyTime' => $totalStudyTime,
+            'totalBreakTime' => $totalBreakTime,
         ]);
     }
 
@@ -166,35 +176,10 @@ class TodaySkillUpTimeController extends Controller
         //$data['user_id'] = 1020;
         $userId = $data['user_id'];
         $date = $data['date'];
-        $judgementdate = Carbon::parse($data['date']);
-        $dayTotalStudyTime = TodaySkillUpTime::getTotalStudyTimeForDay($userId, $date);
-        // 今日の日付の総勉強時間の判定
-        $judgeFlag = TodayTotalSkillUpTime::totalStudyTimeJudgement($judgementdate, $dayTotalStudyTime);
-
-        // 入力日付の総勉強時間をDB登録
-        // まずはレコードが存在するか確認（user_id と date で複合条件）
-        $record = TodayTotalSkillUpTime::where('user_id', $userId)
-            ->where('date', $date)
-            ->first();
-
-        if ($record) {
-            // 更新処理
-            TodayTotalSkillUpTime::where('user_id', $userId)
-                ->where('date', $date)
-                ->update([
-                    'total_minutes' => $dayTotalStudyTime,
-                    'judge_flag' => $judgeFlag ? '0' : '1',
-                ]);
-        } else {
-            // 新規作成処理
-            TodayTotalSkillUpTime::create([
-                'user_id' => $userId,
-                'date' => $date,
-                'total_minutes' => $dayTotalStudyTime,
-                'judge_flag' => $judgeFlag ? '0' : '1',
-            ]);
-        }
-        return redirect()->route('today.list')->with('message', $date . 'の自己研鑽を修正しました。');
+        $totalStudyTime = TodaySkillUpTime::getTotalStudyTimeForDay($userId, $date);
+        $judgementDate = Carbon::parse($data['date']);
+        TodayTotalSkillUpTime::upsertTotalStudyTime($userId, $judgementDate, $totalStudyTime);
+        return redirect()->route('today.list', ['date' => $date])->with('changeMessage', $date . 'の自己研鑽を修正しました。');
     }
 
 
@@ -203,9 +188,8 @@ class TodaySkillUpTimeController extends Controller
     {
         // 指定したIDのデータを取得して削除
         $todaySkillUpTime = TodaySkillUpTime::findOrFail($id);
-        $date = $todaySkillUpTime->date;
         $todaySkillUpTime->delete();
-        return redirect()->route('today.list')->with('message', $todaySkillUpTime->date . 'の自己研鑽を１件削除しました。');
+        return redirect()->route('today.list', ['date' => $todaySkillUpTime->date])->with('changeMessage', $todaySkillUpTime->date . 'の自己研鑽を１件削除しました。');
     }
 
 
@@ -214,5 +198,72 @@ class TodaySkillUpTimeController extends Controller
     {
         // 成功メッセージを付けてリダイレクト
         return redirect()->route('home')->with('message', '自己研鑽時間が登録されました！');
+    }
+
+    // 休憩ボタン処理（休憩開始・休憩終了）
+    public function break(Request $request, $id = null)
+    {
+        $userId = 1020; // または auth()->id()
+
+        if ($id) {
+            $skillUpTime = TodaySkillUpTime::findOrFail($id); // 指定したIDのデータを取得
+        } else {
+            $skillUpTime = TodaySkillUpTime::getLatestRecordForToday($userId);
+        }
+
+        $today = Carbon::today()->toDateString();
+        // 休憩中でない → 休憩開始
+        if ($skillUpTime->break_flag === '0') {
+            $breakTime = BreakTime::where([
+                ['today', '=', $today],
+                ['user_id', '=', $userId],
+            ])->first();
+            $startTime = Carbon::now()->format('H:i');
+
+            if (!$breakTime) {
+                $breakTime = BreakTime::create([
+                    'today' => $today,
+                    'break_start' => $startTime,  // 現在時刻を取得
+                    'total_break_time' => 0,
+                ]);
+            } else {
+                $breakTime->break_start = $startTime;
+                $breakTime->save();
+            }
+
+
+            $skillUpTime->break_flag = '1';
+            $skillUpTime->save();
+
+            $message = '休憩を開始しました。';
+        } else {
+            // 休憩中 → 休憩終了
+            $breakTime = BreakTime::where([
+                ['today', '=', $today],
+                ['user_id', '=', $userId],
+            ])->first();;
+
+            if ($breakTime) {
+                $startTime = Carbon::parse($breakTime->break_start);  // レコードのstart_time
+                $endTime = Carbon::now()->format('H:i');  // 現在時刻を取得
+                $breakTime->break_end = $endTime;
+                // start_timeとend_timeの差分を計算（分単位）
+                $totalBreakTime = $startTime->diffInMinutes(Carbon::parse($endTime));
+                // 差分をdataに追加
+                if ($breakTime->total_break_time) {
+                    $breakTime->total_break_time += $totalBreakTime;
+                } else {
+                    $breakTime->total_break_time = $totalBreakTime;
+                }
+                $breakTime->save();
+                View::share('todayTotalBreakTime', $breakTime->total_break_time);
+            }
+            $skillUpTime->break_flag = '0';
+            $skillUpTime->save();
+
+            $message = '休憩を終了しました。総休憩時間：' . $breakTime->total_break_time . '分';
+        }
+
+        return redirect()->route('home')->with('breakMessage', $message);
     }
 }

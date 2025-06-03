@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('total_study_time')->default(0); // 総学習時間（分単位）
             $table->text('study_content')->nullable(); // 学習内容
             $table->char('start_flag', 1)->default('0'); // 開始有効フラグ ('0' or '1')
-            // $table->char('break_flag', 1)->default('0'); // 休憩有効フラグ ('0' or '1')
+            $table->char('break_flag', 1)->default('0'); // 休憩有効フラグ ('0' or '1')
             $table->char('end_flag', 1)->default('0'); // 終了有効フラグ ('0' or '1')
             $table->timestamps(); // 作成日時と更新日時
 

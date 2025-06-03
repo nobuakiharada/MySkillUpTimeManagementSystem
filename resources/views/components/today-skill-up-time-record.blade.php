@@ -2,6 +2,15 @@
   <!-- タイトルの追加 -->
   <h2 class="text-3xl font-semibold text-center mb-4">本日の自己研鑽状況（最新５件）</h2>
 
+  @if(isset($todayTotalBreakTime))
+  <div class="flex justify-end mr-4 mb-2">
+    <p class="text-blue-600 font-medium text-lg">
+      これまでの休憩時間：
+      <span class="text-blue-800 font-semibold">{{ $todayTotalBreakTime }} 分</span>
+    </p>
+  </div>
+  @endif
+
   {{-- 自己研鑽情報の表 --}}
   <table class="table-auto w-full text-center border-collapse border border-gray-300 rounded-lg shadow-lg">
     <thead>

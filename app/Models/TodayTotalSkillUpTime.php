@@ -105,6 +105,7 @@ class TodayTotalSkillUpTime extends Model
         }
     }
 
+    // 総自己学習時間の合否判定処理
     public static function totalStudyTimeJudgement(Carbon $date, int $totalStudyTime): bool
     {
         // 土日（または祝日）なら true
@@ -120,9 +121,40 @@ class TodayTotalSkillUpTime extends Model
         }
     }
 
+    // 休日か判定処理
     protected static function isHoliday(Carbon $date): bool
     {
         $holidays = Yasumi::create('Japan', $date->year);
         return $holidays->isHoliday($date);
+    }
+
+    // 今日の日付の総勉強時間をDB登録or更新する処理
+    public static function upsertTotalStudyTime(int $userId, Carbon $date, int $totalStudyTime): void
+    {
+        $judgeResult = self::totalStudyTimeJudgement($date, $totalStudyTime) ? '0' : '1';
+
+        $record = TodayTotalSkillUpTime::where('user_id', $userId)
+            ->whereDate('date', $date->toDateString())
+            ->first();
+
+        if ($record) {
+            // 既存レコードがある → update
+            TodayTotalSkillUpTime::where('user_id', $userId)
+                ->where('date', $date->toDateString())
+                ->update([
+                    'total_minutes' => $totalStudyTime,
+                    'judge_flag' => $judgeResult,
+                    'updated_at' => now(), // timestamps を手動で
+                ]);
+        } else {
+            // レコードがない → insert
+            TodayTotalSkillUpTime::create([
+                'user_id' => $userId,
+                'date' => $date->toDateString(),
+                'total_minutes' => $totalStudyTime,
+                'judge_flag' => $judgeResult,
+                'updated_at' => now()
+            ]);
+        };
     }
 }

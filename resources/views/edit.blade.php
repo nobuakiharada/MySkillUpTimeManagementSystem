@@ -70,7 +70,7 @@
       <button type="submit" class="bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700 transition">
         {{ isset($skillUpTime) ? '更新する' : '登録する' }}
       </button>
-      <a href="{{ route('today.list') }}"
+      <a href="{{ route('today.list', ['date' => $skillUpTime->date]) }}"
         class="ml-4 px-5 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-100 transition">
         キャンセル
       </a>
