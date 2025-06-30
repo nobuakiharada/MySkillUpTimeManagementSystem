@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@section('scripts')
+<script src="{{ asset('js/skillUp.js') }}"></script>
+@endsection
+
 @section('content')
 <!-- configにて -->
 <x-header :title="'自己研鑽 - 時間管理システム'" />
@@ -33,7 +37,7 @@
         </label>
         <textarea id="study_content" name="study_content" rows="4"
           class="w-full resize-y p-4 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-          placeholder="例: 本日の自己研鑽内容を簡潔に記載してください"></textarea>
+          placeholder="例: 本日の自己研鑽内容を簡潔に記載してください">{{ old('study_content') }}</textarea>
         @error('study_content')
         <p class="text-red-500 text-sm mt-2 text-center">{{ $message }}</p>
         @enderror
@@ -67,14 +71,16 @@
     @if(!empty($newSkillUpTimeRecord) && $newSkillUpTimeRecord->break_flag === '0')
     <form action="{{ route('today.break', ['id' => $newSkillUpTimeRecord->id]) }}" method="POST">
       @csrf
-      <button type="submit" class="bg-yellow-500 text-white hover:bg-yellow-400 px-6 py-2 rounded-lg w-32">
+      <button type="submit" class="bg-yellow-500 text-white hover:bg-yellow-400 px-6 py-2 rounded-lg w-32"
+        data-message="休憩を開始しますか？">
         休憩開始
       </button>
     </form>
     @elseif(!empty($newSkillUpTimeRecord) && $newSkillUpTimeRecord->break_flag === '1')
     <form action="{{ route('today.break', ['id' => $newSkillUpTimeRecord->id]) }}" method="POST">
       @csrf
-      <button type="submit" class="bg-yellow-500 text-white hover:bg-yellow-400 px-6 py-2 rounded-lg w-32">
+      <button type="submit" class="bg-yellow-500 text-white hover:bg-yellow-400 px-6 py-2 rounded-lg w-32"
+        data-message="休憩を終了しますか？">
         休憩終了
       </button>
     </form>
