@@ -64,19 +64,17 @@ class TodaySkillUpTime extends Model
      */
     public static function getTotalStudyTimeForToday(int $userId)
     {
-        $breakTime = BreakTime::where([
-            ['today', '=', Carbon::today()->toDateString()],
-            ['user_id', '=', $userId],
-        ])->first();
-        if ($breakTime) {
-            return self::where('user_id', $userId)
-                ->whereDate('date', Carbon::today())
-                ->sum('total_study_time') - $breakTime->total_break_time;
-        } else {
-            return self::where('user_id', $userId)
-                ->whereDate('date', Carbon::today())
-                ->sum('total_study_time');
-        }
+        $today = Carbon::today()->toDateString();
+
+        $studyTime = self::where('user_id', $userId)
+            ->whereDate('date', $today)
+            ->sum('total_study_time');
+
+        $breakTime = BreakTime::where('user_id', $userId)
+            ->where('today', $today)
+            ->value('total_break_time') ?? 0;
+
+        return max(0, $studyTime - $breakTime);
     }
 
     /**
@@ -85,20 +83,16 @@ class TodaySkillUpTime extends Model
      * @param int $userId
      * @return float
      */
-    public static function getTotalStudyTimeForDay(int $userId, $date)
+    public static function getTotalStudyTimeForDay(int $userId, string $date)
     {
-        $breakTime = BreakTime::where([
-            ['today', '=', $date],
-            ['user_id', '=', $userId],
-        ])->first();
-        if ($breakTime) {
-            return self::where('user_id', $userId)
-                ->whereDate('date', $date)
-                ->sum('total_study_time') - $breakTime->total_break_time;
-        } else {
-            return self::where('user_id', $userId)
-                ->whereDate('date', $date)
-                ->sum('total_study_time');
-        }
+        $studyTime = self::where('user_id', $userId)
+            ->whereDate('date', $date)
+            ->sum('total_study_time');
+
+        $breakTime = BreakTime::where('user_id', $userId)
+            ->where('today', $date)
+            ->value('total_break_time') ?? 0;
+
+        return max(0, $studyTime - $breakTime);
     }
 }
