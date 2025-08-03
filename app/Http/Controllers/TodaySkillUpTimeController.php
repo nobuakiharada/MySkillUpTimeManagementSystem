@@ -186,10 +186,29 @@ class TodaySkillUpTimeController extends Controller
     // 自己研鑽記録の削除
     public function destroy($id)
     {
-        // 指定したIDのデータを取得して削除
         $todaySkillUpTime = TodaySkillUpTime::findOrFail($id);
+        $date = $todaySkillUpTime->date;
+        $userId = $todaySkillUpTime->user_id;
+
         $todaySkillUpTime->delete();
-        return redirect()->route('today.list', ['date' => $todaySkillUpTime->date])->with('changeMessage', $todaySkillUpTime->date . 'の自己研鑽を１件削除しました。');
+
+        // 再計算のため残りの同日の記録を集計
+        $remainingRecords = TodaySkillUpTime::where('user_id', $userId)
+            ->where('date', $date)
+            ->get();
+
+        if ($remainingRecords->isEmpty()) {
+            // 記録がなくなったら合計も削除
+            TodayTotalSkillUpTime::where('user_id', $userId)
+                ->where('date', $date)
+                ->delete();
+        } else {
+            $totalStudyTime = $remainingRecords->sum('total_study_time');
+            TodayTotalSkillUpTime::upsertTotalStudyTime($userId, Carbon::parse($date), $totalStudyTime);
+        }
+
+        return redirect()
+            ->route('today.list', ['date' => $date])->with('changeMessage', $date . 'の自己研鑽を１件削除しました。');
     }
 
 

@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\View;
+use Carbon\Carbon;
 use App\Models\TodaySkillUpTime;
+use App\Models\TodayTotalSkillUpTime;
 
 class HomeController extends Controller
 {
@@ -20,21 +22,27 @@ class HomeController extends Controller
         if (!$todaySkillUpTimeAllRecords->isEmpty()) {
             Session::put('todaySkillUpTimeAllRecords', $todaySkillUpTimeAllRecords);
         }
+        // 合計学習時間と判定レコードを取得（なければnull）
+        $totalStudyTime = TodaySkillUpTime::getTotalStudyTimeForToday($userId);
+        View::share('totalStudyTime', $totalStudyTime);
 
         $justNow = false;
-        if ($newSkillUpTimeRecord?->end_flag === "1" && !Session::has('todaySkillUpTime')) {
-            $message = '本日の自己研鑽を開始しましょう！';
-            session()->put('message', $message);
-        }
-
+        $message = null;
+        // 今日の自己研鑽時間が存在する場合、メッセージを設定
         if ($newSkillUpTimeRecord?->start_flag === "1" || Session::has('todaySkillUpTime')) {
             $justNow = true;
             $message = '本日の自己研鑽中です！目標時間達成まで頑張って！';
-            session()->put('message', $message);
+        } elseif ($newSkillUpTimeRecord?->end_flag === "1") {
+            $message = '本日の自己研鑽を開始しましょう！';
         }
 
+        if ($message !== null) {
+            session()->put('message', $message);
+        }
         session()->put('justNow', $justNow);
 
-        return view('home')->with('newSkillUpTimeRecord', $newSkillUpTimeRecord);
+        return view('home')->with([
+            'newSkillUpTimeRecord' => $newSkillUpTimeRecord,
+        ]);
     }
 }

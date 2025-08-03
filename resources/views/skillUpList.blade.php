@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@section('scripts')
+<script src="{{ asset('js/totalStudy.js') }}"></script>
+@endsection
+
 @section('content')
 <div class="container mx-auto px-4 py-6">
   <h1 class="text-2xl font-semibold text-center text-gray-800 mb-8">日々の自己研鑽一覧</h1>
@@ -33,6 +37,7 @@
       <thead class="bg-gray-100">
         <tr>
           <th class="px-4 py-2 border-b font-medium text-gray-800">日付</th>
+          <th class="px-4 py-2 border-b font-medium text-gray-800">曜日</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">総自己研鑽時間（分）</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">総休憩時間（分）</th>
           <th class="px-4 py-2 border-b font-medium text-gray-800">判定</th>
@@ -44,7 +49,9 @@
         @foreach($totalSkillUpTime as $record)
         <tr class="hover:bg-gray-50">
           <td class="px-4 py-2 border-b">{{ $record->date }}</td>
-          <td class="px-4 py-2 border-b">{{ $record->total_minutes }}</td>
+          <td class="px-4 py-2 border-b">{{ $record->weekday }}</td>
+          <td class="px-4 py-2 border-b" style="font-weight: bold;">{{ $record->total_minutes }}
+          </td>
           @if(isset($monthlyBreakTime[$record->date]))
           <td class="px-4 py-2 border-b">{{ $monthlyBreakTime[$record->date]}}</td>
           @else
@@ -63,9 +70,9 @@
             <a href="{{ route('skillUpResult.edit', $record->date) }}" class="text-blue-600 hover:text-blue-800">編集</a>
           </td>
           <td class="px-4 py-2 border-b">
-            <form action="{{ route('skillUpResult.destroy', $record->date) }}" method="POST"
-              onsubmit="return confirm('本当に総学習時間をリセットしてもよろしいですか？');">
+            <form action="{{ route('skillUpResult.destroy', $record->date) }}" method="POST" class="delete-form">
               @csrf
+              <input type="hidden" name="month" value="{{ $selectedMonth }}">
               <button type="submit" class="text-red-600 hover:text-red-800">削除</button>
             </form>
           </td>
@@ -75,9 +82,10 @@
     </table>
   </div>
 
-  <div class="mt-6">
-    {{ $totalSkillUpTime->links() }}
-  </div>
+  <!-- ページメーション用 -->
+  <!-- <div class="mt-6">
+    {{-- {{ $totalSkillUpTime->links() }} --}}
+  </div> -->
   @else
   <p class="text-center text-gray-500 mt-10">記録がありません。</p>
   @endif

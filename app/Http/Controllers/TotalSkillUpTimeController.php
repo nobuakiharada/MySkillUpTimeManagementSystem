@@ -6,12 +6,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\TodayTotalSkillUpTime;
 use App\Models\BreakTime;
 
 class TotalSkillUpTimeController extends Controller
 {
+    public function __construct() {}
+
     // 自己研鑽まとめ一覧表示
     public function index(Request $request)
     {
@@ -33,7 +36,13 @@ class TotalSkillUpTimeController extends Controller
         $totalSkillUpTime = TodayTotalSkillUpTime::where('user_id', $userId)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->orderBy('date', 'desc')
-            ->paginate(30);
+            // ->paginate(30) // ページネーションは選択月滞在が難しくなるので排除
+            ->get();
+
+        // 各レコードに曜日情報を追加
+        foreach ($totalSkillUpTime as $record) {
+            $record->weekday = Carbon::parse($record->date)->isoFormat('dddd'); // 例: 月曜日
+        }
 
         // 該当月の総学習時間（分単位の合計）
         $monthlyTotalMinutes = TodayTotalSkillUpTime::where('user_id', $userId)
@@ -99,7 +108,7 @@ class TotalSkillUpTimeController extends Controller
 
 
     // 自己研鑽まとめ情報の削除
-    public function destroy($date)
+    public function destroy(Request $request, $date)
     {
         $userId = 1020; //$userId = Auth::id();
 
@@ -108,7 +117,12 @@ class TotalSkillUpTimeController extends Controller
             ->where('date', $date)
             ->delete();
 
-        return redirect()->route('skillUpResult')->with('summaryMessage', $date . ' の総学習時間をリセットしました。',);
+        // hiddenフィールドで渡された月情報を取得（デフォルトは今月）
+        $selectedMonth = $request->input('month', now()->format('Y-m'));
+        Log::info('削除処理で受け取った month:', ['month' => $request->input('month')]);
+
+        return redirect()->route('skillUpResult', ['month' => $selectedMonth])
+            ->with('summaryMessage', $date . ' の総自己研鑽記録を削除しました。');
     }
 
 
@@ -123,14 +137,56 @@ class TotalSkillUpTimeController extends Controller
             if (!$result) {
                 return redirect()->back()->with('summaryMessage', '欠損日の補完中にエラーが発生しました。');
             }
-            return redirect()->route('skillUpResult')->with('summaryMessage', "{$selectedMonth} の未研鑽日を正常に登録しました。");
+            return redirect()->route('skillUpResult', ['month' => $selectedMonth])->with('summaryMessage', "{$selectedMonth} の未研鑽日を正常に登録しました。");
         }
 
         if ($type === 'reRegister') {
             TodayTotalSkillUpTime::calculateAndSaveDailyStudyJudgments($userId, $selectedMonth);
-            return redirect()->route('skillUpResult')->with('summaryMessage', "{$selectedMonth} の総自己研鑽時間を再登録しました。",);
+            return redirect()->route('skillUpResult', ['month' => $selectedMonth])->with('summaryMessage', "{$selectedMonth} の総自己研鑽時間を再登録しました。",);
         }
 
         return redirect()->back()->with('summaryMessage', '無効な操作が指定されました。');
+    }
+
+
+    /* ----------------API------------  */
+    // 未登録日チェックAPI
+    public function unstudyDaysFillCheck(Request $request)
+    {
+        $userId = 1020; // 本番では Auth::id() を使う
+
+        $selectedMonth = $request->input('selectedMonth');
+
+        // 月初と月末をCarbonで取得
+        try {
+            $monthCarbon = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => '無効な月形式です。',
+            ], 400);
+        }
+
+        $now = Carbon::now();
+        $isCurrentMonth = $monthCarbon->isSameMonth($now);
+
+        $start = $monthCarbon;
+        $end = $isCurrentMonth ? Carbon::yesterday() : $monthCarbon->copy()->endOfMonth();
+
+        $datesToCheck = collect();
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            $datesToCheck->push($date->format('Y-m-d'));
+        }
+
+        $existingDates = TodayTotalSkillUpTime::where('user_id', $userId)
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->pluck('date')
+            ->map(fn($d) => Carbon::parse($d)->format('Y-m-d'));
+
+        $missingDates = $datesToCheck->diff($existingDates);
+
+        return response()->json([
+            'status' => $missingDates->isEmpty() ? 'already_filled' : 'unfilled',
+        ]);
     }
 }

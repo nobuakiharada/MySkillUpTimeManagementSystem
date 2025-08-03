@@ -29,7 +29,8 @@ Route::post('/skillUpResult/update/{date}', [TotalSkillUpTimeController::class, 
 Route::post('/skillUpResult/destroy/{date}', [TotalSkillUpTimeController::class, 'destroy'])->name('skillUpResult.destroy'); // 削除
 Route::get('/skillUpResult/unique/{type}', [TotalSkillUpTimeController::class, 'uniqueButton'])->name('skillUpResult.uniqueButton'); // 特殊ボタン
 
-
+// API
+Route::post('/api/skillUpResult/fillCheck', [TotalSkillUpTimeController::class, 'unstudyDaysFillCheck']); // 自動入力API
 
 
 Route::middleware('auth')->group(function () {
